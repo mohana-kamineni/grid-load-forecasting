@@ -185,7 +185,7 @@ def compute_autocorrelation(series: pd.Series, max_lag: int = 168) -> Dict[int, 
     return acf
 
 
-def generate_audit_plots(series: pd.Series, prefix: str = "gate0") -> List[str]:
+def generate_audit_plots(series: pd.Series, prefix: str = "diagnostic") -> List[str]:
     """Generate diagnostic figures for differences and autocorrelation."""
     plot_paths = []
     FIGURES_DIR.mkdir(parents=True, exist_ok=True)
@@ -252,6 +252,7 @@ def audit_artificial_data(
     df: pd.DataFrame,
     target_col: str = "load_mw",
     generate_plots: bool = True,
+    plot_prefix: str = "diagnostic",
 ) -> ArtificialDataAuditResult:
     """Execute Gate 0.4 Artificial-Data and Interpolation Audit."""
     findings = []
@@ -353,7 +354,7 @@ def audit_artificial_data(
     plot_paths = []
     if generate_plots:
         try:
-            plot_paths = generate_audit_plots(series, prefix="gate0_se3")
+            plot_paths = generate_audit_plots(series, prefix=plot_prefix)
             findings.append(f"Generated diagnostic figures: {plot_paths}")
         except Exception as e:
             findings.append(f"Plot generation skipped or failed: {e}")

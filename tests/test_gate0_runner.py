@@ -21,7 +21,11 @@ class TestGate0Runner(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             report_path = Path(tmpdir) / "test_report.md"
             clean_df = make_clean_series()
-            result = run_gate0_audit(actual_load_df=clean_df, output_report_path=report_path)
+            result = run_gate0_audit(
+                actual_load_df=clean_df,
+                output_report_path=report_path,
+                plot_prefix="synthetic_gate0",
+            )
             self.assertEqual(result["overall_status"], "PASS")
             self.assertTrue(report_path.exists())
             content = report_path.read_text(encoding="utf-8")
@@ -35,7 +39,11 @@ class TestGate0Runner(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             report_path = Path(tmpdir) / "test_report.md"
             flat_df = make_flatlined_series(flatline_hours=12)
-            result = run_gate0_audit(actual_load_df=flat_df, output_report_path=report_path)
+            result = run_gate0_audit(
+                actual_load_df=flat_df,
+                output_report_path=report_path,
+                plot_prefix="synthetic_gate0",
+            )
             self.assertEqual(result["overall_status"], "FAIL")
             self.assertTrue(report_path.exists())
             content = report_path.read_text(encoding="utf-8")

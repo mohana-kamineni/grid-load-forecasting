@@ -208,6 +208,7 @@ def run_gate0_audit(
     forecast_df: Optional[pd.DataFrame] = None,
     metadata: Optional[Dict[str, Any]] = None,
     output_report_path: Optional[Path] = None,
+    plot_prefix: str = "gate0_se3",
 ) -> Dict[str, Any]:
     """Master orchestrator for Gate 0 audit."""
     if output_report_path is None:
@@ -281,7 +282,7 @@ def run_gate0_audit(
         # Run empirical tests on real data
         tz_res = audit_timezone_dst(actual_load_df)
         cont_res = audit_continuity(actual_load_df)
-        art_res = audit_artificial_data(actual_load_df)
+        art_res = audit_artificial_data(actual_load_df, plot_prefix=plot_prefix)
 
         # Determine overall status
         if not prov_res.passed or not tz_res.passed or not cont_res.passed or not art_res.passed or not sem_res.passed:

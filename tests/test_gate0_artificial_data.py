@@ -44,10 +44,11 @@ class TestGate0ArtificialData(unittest.TestCase):
 
     def test_plot_generation(self):
         df = make_clean_series()
-        result = audit_artificial_data(df, generate_plots=True)
+        result = audit_artificial_data(df, generate_plots=True, plot_prefix="synthetic_gate0")
         self.assertEqual(len(result.figure_paths), 2)
         for p in result.figure_paths:
             self.assertTrue(Path(p).exists())
+            self.assertIn("synthetic_gate0", p)
 
 
 if __name__ == "__main__":
