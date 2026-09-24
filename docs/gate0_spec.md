@@ -1,6 +1,6 @@
-# Gate 0 Specification: Dataset Provenance & Temporal Validity Audit
+# Dataset Provenance & Temporal Validity Audit
 
-This document defines the mathematical, logical, and regulatory criteria for **Gate 0** of Project P4.
+This document defines the mathematical, logical, and regulatory criteria.
 
 ---
 
