@@ -1,6 +1,6 @@
 # Project P4: Data-Driven Grid Load Forecasting for Operational Planning
 
-[![Status: Complete — Evaluated & Frozen](https://img.shields.io/badge/Status-Complete%20—%20Evaluated%20%26%20Frozen-brightgreen.svg)](#)
+[![Status: Complete](https://img.shields.io/badge/Status-Complete%20—%20Evaluated%20%26%20Frozen-brightgreen.svg)](#)
 [![Data Source: ENTSO-E](https://img.shields.io/badge/Data%20Source-ENTSO--E%20Transparency%20Platform-blue.svg)](https://transparency.entsoe.eu/)
 [![Geographic Scope: Sweden SE3](https://img.shields.io/badge/Bidding%20Zone-Sweden%20SE3-green.svg)](#)
 [![Tests: 63 Passing](https://img.shields.io/badge/Tests-63%2F63%20Passing-brightgreen.svg)](#)
