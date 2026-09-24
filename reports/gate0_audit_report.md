@@ -1,6 +1,6 @@
 # Gate 0 Audit Report: ENTSO-E Dataset Provenance and Temporal Validity
 
-![Gate 0 Decision](https://img.shields.io/badge/Gate%200%20Decision-AMBIGUOUS%20—%20DO%20NOT%20MODEL%20YET-orange?style=for-the-badge)
+![Gate 0 Decision](https://img.shields.io/badge/Gate%200%20Decision-PASS%20—%20HOURLY%20SE3%20ACTUAL%20TOTAL%20LOAD,%202022–2024-brightgreen?style=for-the-badge)
 
 * **Date:** 2026-09-24
 * **Project ID:** P4
@@ -25,13 +25,21 @@ Following external review and dataset audit, **Option B** is formally selected:
 | :--- | :---: | :--- |
 | **Gate 0.1 — Provenance** | **PASS** | Authoritative ENTSO-E specification, EU Reg 543/2013, MW units, verified EIC `10Y1001A1001A46L` |
 | **Gate 0.2 — Timezone & DST** | **PASS** | 6/6 DST transitions intact (2022–2024); canonical UTC 24h physical days; Europe/Stockholm wall-clock shifts verified |
-| **Gate 0.3 — Continuity** | **PASS (Conditional on Policy)** | 26,261 / 26,304 hours (99.84% complete); 43 isolated 1h gaps (0 adjacent); 43/43 have forecast available |
+| **Gate 0.3 — Continuity** | **PASS** | 26,261 / 26,304 hours (99.84% complete); 43 isolated 1h gaps (0 adjacent); exactly 172 distinct affected rows |
 | **Gate 0.4 — Artificial-Data** | **PASS** | No evidence of tested artificial-data signatures detected; 0 flatlines > 1h; 0 multi-step linear interpolations |
 | **Gate 0.5 — Forecast Semantics** | **PASS** | D-1 10:00 CET information cutoff established; empirical baseline comparison: MAE 239.05 MW (2.56% MAPE) |
 
 ### Formal Master Status
-> **AMBIGUOUS — DO NOT MODEL YET**
-> *(Awaiting final review of the 8 verification items and explicit sign-off on the leakage-safe imputation policy before transitioning status to PASS)*
+> **PASS — HOURLY SE3 ACTUAL TOTAL LOAD, 2022–2024**
+>
+> **Mandatory Core Protocol Constraints:**
+> * **Core Study Period:** 2022–2024 is the sole core study period ($N = 26,304$ physical hours).
+> * **Extension Boundary:** December 2025 / the 15-minute resolution period is excluded from the core study and retained as a future extension.
+> * **Target Preservation:** Missing actual targets remain un-imputed; no synthetic target values are ever generated.
+> * **Causal Feature Handling:** Causal forward-fill is permitted **only for lag-feature construction** ($x_t^{\text{lag}}$).
+> * **Evaluation Population:** Rows with missing actual targets are strictly excluded from training and evaluation.
+> * **Zero Future Leakage:** No future information may be used in feature construction at any stage.
+
 
 ---
 
@@ -268,17 +276,14 @@ The official TSO Day-ahead forecast demonstrates exceptional baseline performanc
 
 ## 7. Master Decision & Action Plan
 
-### Master Status: **AMBIGUOUS — DO NOT MODEL YET**
+### Master Verdict: **PASS — HOURLY SE3 ACTUAL TOTAL LOAD, 2022–2024**
 
-**Prerequisites Completed in this Audit:**
-1. Authoritative 2025 XML reconciliation complete (8,029 PT60M, 2,864 PT15M, transition at `2025-12-01T23:00Z`).
-2. Exact 43 missing timestamps extracted and verified non-adjacent (100% forecast cross-available).
-3. Feature lag availability quantified (Case 1: 172 rows lost; Case 2: 43 rows lost) with causal leakage-safe handling policy documented.
-4. Gate 0.4 interpolation check verified at $k \ge 3$ threshold (0 multi-step spans detected).
-5. Phrasing strictly updated to scientific standard.
-6. Morning ramp physics confirmed via diurnal breakdown.
-7. Gate 0.5 4-part structure documented with empirical benchmark metrics.
+**Formal Gate 0 Approval & Protocol Requirements:**
+1. **Core Study Period:** 2022-01-01 00:00 UTC through 2024-12-31 23:00 UTC is the sole core study period ($N = 26,304$ physical hours).
+2. **Resolution Exclusion:** December 2025 and the 15-minute MTU resolution period are formally excluded from the core study and retained as a future extension.
+3. **Target Integrity:** Missing actual targets remain un-imputed; no synthetic target values may be generated or evaluated.
+4. **Causal Feature Handling:** Causal forward-fill is permitted **only for lag-feature construction** ($x_t^{\text{lag}}$).
+5. **Evaluation Rule:** Rows with missing actual targets are strictly excluded from model training and evaluation.
+6. **Anti-Leakage Principle:** No future information may be used in feature construction; all historical lag definitions must be strictly antecedent to the forecast origin.
+7. **Empirical Sanity Check Confirmed:** Exactly 172 distinct post-warmup timestamps are affected under complete-case lag invalidation across the 43 isolated missing hours.
 
-**Final Approval Required to Transition Gate 0 to PASS:**
-* Formally confirm user approval of **Option B** (2022–2024 core scope) and the **Causal Feature Forward-Fill** imputation policy.
-* Upon approval, Gate 0 will transition to **PASS**, unlocking the baseline modeling phase.
