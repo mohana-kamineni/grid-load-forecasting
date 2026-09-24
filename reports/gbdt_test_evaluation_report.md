@@ -36,9 +36,9 @@ Evaluated on the untouched 2024 H2 partition on **strictly identical origin sets
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
 | **ENTSO-E Day-ahead Forecast [6.1.B]** | **14–38 hours** (D-1 10:00 CET) | **230.79** | **299.73** | **2.55%** | **+41.43** | **0.9874** |
 | **GBDT ($h=24$)** | 24 hours | 334.92 | 469.22 | 3.64% | -36.53 | — |
-| **Daily Seasonal-Naive ($h=24$)** | 24 hours | 488.25 | 488.25 | 3.64% | — | — |
+| **Daily Seasonal-Naive ($h=24$)** | 24 hours | 488.25 | 687.88 | 5.39% | +18.68 | — |
 
-*(Note: The ENTSO-E forecast is an external operational benchmark issued at D-1 10:00 CET with weather and dispatch inputs, not a simple hourly autoregressive baseline).*
+*(Note: The ENTSO-E forecast is an external operational benchmark issued under a documented D-1 10:00 CET information boundary, corresponding to 14–38 hours of lead time, rather than a simple hourly autoregressive baseline).*
 
 ---
 
@@ -73,4 +73,4 @@ Evaluated on the untouched 2024 H2 partition on **strictly identical origin sets
    - **$h=1$:** The GBDT achieves a **56.34% MAE reduction** over persistence (101.27 MW vs 231.94 MW), mirroring the 50.69% reduction in H1.
    - **$h=6$:** The GBDT achieves a **43.55% MAE reduction** over daily seasonal-naive (275.56 MW vs 488.13 MW), consistent with H1 (+39.65%).
    - **$h=24$:** The GBDT achieves a **31.40% MAE reduction** over daily seasonal-naive (334.92 MW vs 488.25 MW), improving upon the +18.18% gain in H1.
-   - **$h=168$:** The GBDT achieves a **7.40% MAE reduction** over weekly seasonal-naive (559.74 MW vs 604.48 MW), with a negative Mean Bias of $-176.51$ MW reflecting the autumn seasonal heating ramp where load increases week-over-week without weather forecast inputs.
+   - **$h=168$:** The GBDT achieves a **7.40% MAE reduction** over weekly seasonal-naive (559.74 MW vs 604.48 MW). The smaller improvement at 168h is consistent with the model relying on historical load and calendar information during sustained seasonal changes; without exogenous information such as future weather, the model may lag persistent changes that are not represented in historical load patterns.
