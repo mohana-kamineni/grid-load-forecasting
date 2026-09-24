@@ -102,3 +102,4 @@ def is_api_key_configured() -> bool:
 
 
 CONFIG = ENTSOEConfig()
+
