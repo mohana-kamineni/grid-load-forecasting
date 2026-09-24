@@ -323,8 +323,9 @@ def audit_artificial_data(
     findings.append(f"Delta y zero rate: {d1_zero_rate:.4%}")
 
     # 3. Second Differences & Deterministic Linear Interpolation
-    interp_spans = detect_linear_interpolation(series, min_span_length=4)
+    interp_spans = detect_linear_interpolation(series, min_span_length=3)
     max_interp_hours = max([s.duration_hours for s in interp_spans], default=0)
+    multi_step_spans = [s for s in interp_spans if s.duration_hours >= 4]
 
     if max_interp_hours >= 6:
         errors.append(
@@ -333,10 +334,17 @@ def audit_artificial_data(
         )
     elif max_interp_hours >= 4:
         findings.append(
-            f"WARNING: Short linear interpolation sequence of {max_interp_hours} hours detected ({len(interp_spans)} spans)."
+            f"WARNING: Short linear interpolation sequence of {max_interp_hours} hours detected ({len(multi_step_spans)} multi-step spans)."
         )
     else:
-        findings.append("Zero artificial linear interpolation spans detected (max span < 4 hours).")
+        if len(interp_spans) > 0:
+            findings.append(
+                f"Detected {len(interp_spans)} isolated 3-point sequences (single second-difference zero, k=1) "
+                f"consistent with integer telemetry quantization; 0 multi-step linear interpolation spans (duration >= 4h, k >= 2) detected."
+            )
+        else:
+            findings.append("Zero artificial linear interpolation spans detected (min span >= 3 points).")
+
 
     # 4. Autocorrelation
     acf = compute_autocorrelation(series, max_lag=168)
@@ -361,6 +369,11 @@ def audit_artificial_data(
 
     passed = len(errors) == 0
     status = "PASS" if passed else "FAIL"
+    if passed:
+        findings.append(
+            "No evidence of the tested artificial-data signatures was detected under the implemented diagnostics and thresholds."
+        )
+
 
     return ArtificialDataAuditResult(
         passed=passed,
