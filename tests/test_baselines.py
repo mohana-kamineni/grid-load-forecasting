@@ -84,6 +84,123 @@ class TestBaselines(unittest.TestCase):
         self.assertEqual(s_ffill.iloc[50], s_gapped.iloc[49])
         self.assertNotEqual(s_ffill.iloc[50], s_gapped.iloc[51])
 
+    def test_missing_timestamp_offset_collisions_zero(self):
+        """Regression test: Exhaustive pairwise collision check across all 43 missing actual-load timestamps.
+        
+        Validates that no two missing timestamps differ by any offset in {1, 23, 24, 144, 167, 168} hours,
+        which guarantees pairwise disjointness of their affected rows {t, t+1, t+24, t+168}.
+        """
+        from config.settings import PROCESSED_DATA_DIR
+        actual_parquet = PROCESSED_DATA_DIR / "real_se3_actual_load_6_1_a_2022_2025.parquet"
+        if not actual_parquet.exists():
+            self.skipTest("Real SE3 actual load dataset not found.")
+
+        df = pd.read_parquet(actual_parquet)
+        df_core = df.loc["2022-01-01 00:00:00+00:00":"2024-12-31 23:00:00+00:00"]
+        full_idx = pd.date_range("2022-01-01 00:00:00", "2024-12-31 23:00:00", freq="1h", tz="UTC")
+        s = df_core["load_mw"].reindex(full_idx)
+        missing_ts = s[s.isna()].index
+
+        self.assertEqual(len(missing_ts), 43)
+        collision_offsets = {1, 23, 24, 144, 167, 168}
+        collisions = []
+        for i in range(len(missing_ts)):
+            for j in range(i + 1, len(missing_ts)):
+                diff_hours = abs(int((missing_ts[j] - missing_ts[i]).total_seconds() // 3600))
+                if diff_hours in collision_offsets:
+                    collisions.append((missing_ts[i], missing_ts[j], diff_hours))
+
+        self.assertEqual(len(collisions), 0, f"Found pairwise collisions: {collisions}")
+
+    def test_affected_row_union_equals_172(self):
+        """Regression test: Distinct union of affected post-warmup timestamps equals exactly 172 rows.
+        
+        AffectedSet = union over missing t of {t, t+1, t+24, t+168} intersected with T_eval.
+        """
+        from config.settings import PROCESSED_DATA_DIR
+        actual_parquet = PROCESSED_DATA_DIR / "real_se3_actual_load_6_1_a_2022_2025.parquet"
+        if not actual_parquet.exists():
+            self.skipTest("Real SE3 actual load dataset not found.")
+
+        df = pd.read_parquet(actual_parquet)
+        df_core = df.loc["2022-01-01 00:00:00+00:00":"2024-12-31 23:00:00+00:00"]
+        full_idx = pd.date_range("2022-01-01 00:00:00", "2024-12-31 23:00:00", freq="1h", tz="UTC")
+        s = df_core["load_mw"].reindex(full_idx)
+        missing_ts = s[s.isna()].index
+
+        warmup_hours = 168
+        eval_idx = full_idx[warmup_hours:]
+        eval_set = set(eval_idx)
+
+        affected_union = set()
+        for t in missing_ts:
+            for offset in [0, 1, 24, 168]:
+                affected_t = t + pd.Timedelta(hours=offset)
+                if affected_t in eval_set:
+                    affected_union.add(affected_t)
+
+        self.assertEqual(len(affected_union), 172)
+
+    def test_invalidity_of_y_T_minus_24_at_origin_T_minus_168(self):
+        """Regression test: Assert that using y_{T-24} at origin t = T - 168 is an invalid future lookahead.
+        
+        For target T = t + 168, observation y_{T-24} = y_{t+144} is 144 hours in the future
+        relative to origin t.
+        """
+        model = DailySeasonalNaiveBaseline(mode="fixed_lag_24")
+        pred = model.predict(self.series, horizon=168)
+        target_idx = 300
+        origin_idx = target_idx - 168
+        source_idx = target_idx - 24
+        lookahead_hours = source_idx - origin_idx
+        self.assertEqual(lookahead_hours, 144)
+        self.assertGreater(lookahead_hours, 0)
+        self.assertEqual(pred.iloc[target_idx], self.series.iloc[source_idx])
+
+    def test_valid_baseline_source_timestamps(self):
+        """Regression test: Assert that all valid baselines use strictly antecedent source timestamps <= origin t.
+        
+        For all valid baselines (Persistence, DailySeasonalNaive in causal_origin mode, WeeklySeasonalNaive)
+        and all evaluated horizons h in {1, 6, 24, 168}, the source observation used for target T = t + h
+        must be <= t (i.e., shift >= h).
+        """
+        horizons = [1, 6, 24, 168]
+        models = [
+            ("Persistence", PersistenceBaseline()),
+            ("Daily Seasonal-Naive", DailySeasonalNaiveBaseline(mode="causal_origin")),
+            ("Weekly Seasonal-Naive", WeeklySeasonalNaiveBaseline()),
+        ]
+
+        s = self.series
+        target_idx = 400
+
+        for name, model in models:
+            for h in horizons:
+                origin_idx = target_idx - h
+                pred = model.predict(s, horizon=h)
+                pred_val = pred.iloc[target_idx]
+
+                if name == "Persistence":
+                    expected_source = origin_idx
+                elif name == "Daily Seasonal-Naive":
+                    if h <= 24:
+                        expected_source = target_idx - 24  # <= origin_idx
+                    else:
+                        expected_source = target_idx - 168  # = origin_idx
+                elif name == "Weekly Seasonal-Naive":
+                    expected_source = target_idx - 168  # <= origin_idx
+
+                self.assertLessEqual(
+                    expected_source,
+                    origin_idx,
+                    f"Baseline {name} at h={h} leaks future: source={expected_source} > origin={origin_idx}",
+                )
+                self.assertEqual(
+                    pred_val,
+                    s.iloc[expected_source],
+                    f"Baseline {name} at h={h} does not match expected source value",
+                )
+
 
 if __name__ == "__main__":
     unittest.main()

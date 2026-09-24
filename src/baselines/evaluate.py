@@ -52,11 +52,11 @@ def run_all_baselines(
     s_raw.name = "actual_mw"
 
     # 2. Define baselines and horizons
+    # 2. Define valid baselines and horizons
     horizons = [1, 6, 24, 168]
     models = [
         ("Persistence", PersistenceBaseline()),
-        ("Daily Seasonal-Naive (Causal Origin)", DailySeasonalNaiveBaseline(mode="causal_origin")),
-        ("Daily Seasonal-Naive (Fixed Lag-24)", DailySeasonalNaiveBaseline(mode="fixed_lag_24")),
+        ("Daily Seasonal-Naive", DailySeasonalNaiveBaseline(mode="causal_origin")),
         ("Weekly Seasonal-Naive", WeeklySeasonalNaiveBaseline()),
     ]
 
@@ -69,9 +69,6 @@ def run_all_baselines(
     overall_results: List[BaselineMetrics] = []
     for h in horizons:
         for name, model in models:
-            # Skip Fixed Lag-24 for h <= 24 since it is identical to Causal Origin
-            if name == "Daily Seasonal-Naive (Fixed Lag-24)" and h <= 24:
-                continue
             metrics, _, _ = evaluate_baseline(
                 series_raw=s_raw,
                 baseline_model=model,
@@ -82,6 +79,17 @@ def run_all_baselines(
             )
             overall_results.append(metrics)
 
+    # Diagnostic reference: fixed lag-24 evaluated at h=168 (origin T-24, NOT a valid 168h forecast)
+    diag_model = DailySeasonalNaiveBaseline(mode="fixed_lag_24")
+    diag_metrics_168, _, _ = evaluate_baseline(
+        series_raw=s_raw,
+        baseline_model=diag_model,
+        horizon=168,
+        eval_start=eval_start,
+        eval_end=eval_end,
+        warmup_hours=warmup_hours,
+    )
+
     # 4. Annual Evaluation (2022, 2023, 2024)
     annual_results: Dict[int, List[BaselineMetrics]] = {}
     years = [2022, 2023, 2024]
@@ -91,8 +99,6 @@ def run_all_baselines(
         yr_end = f"{yr}-12-31 23:00:00+00:00"
         for h in horizons:
             for name, model in models:
-                if name == "Daily Seasonal-Naive (Fixed Lag-24)" and h <= 24:
-                    continue
                 metrics, _, _ = evaluate_baseline(
                     series_raw=s_raw,
                     baseline_model=model,
@@ -156,6 +162,7 @@ def run_all_baselines(
     report_md = generate_baseline_markdown_report(
         overall_results=overall_results,
         annual_results=annual_results,
+        diag_metrics_168=diag_metrics_168,
         entsoe_comparison=entsoe_comparison,
         total_post_warmup_hours=len(full_idx) - warmup_hours,
         evaluated_hours=overall_results[0].n_observations,
@@ -168,6 +175,7 @@ def run_all_baselines(
     return {
         "overall_results": overall_results,
         "annual_results": annual_results,
+        "diag_metrics_168": diag_metrics_168,
         "entsoe_comparison": entsoe_comparison,
         "report_path": str(output_report_path),
     }
@@ -176,6 +184,7 @@ def run_all_baselines(
 def generate_baseline_markdown_report(
     overall_results: List[BaselineMetrics],
     annual_results: Dict[int, List[BaselineMetrics]],
+    diag_metrics_168: BaselineMetrics,
     entsoe_comparison: Optional[Dict[str, Any]],
     total_post_warmup_hours: int,
     evaluated_hours: int,
@@ -212,7 +221,7 @@ This report establishes the **empirical forecasting floor** for Sweden SE3 hourl
 | Baseline Model | Mathematical Formula | Horizon $h=1$ | Horizon $h=6$ | Horizon $h=24$ | Horizon $h=168$ |
 | :--- | :--- | :---: | :---: | :---: | :---: |
 | **A. Persistence** | $\\hat{{y}}_{{t+h}} = y_t$ | **Direct / Recursive (Identical)**: $y_t$ | **Direct / Recursive (Identical)**: $y_t$ | **Direct / Recursive (Identical)**: $y_t$ | **Direct / Recursive (Identical)**: $y_t$ |
-| **B. Daily Seasonal-Naive** | $\\hat{{y}}_{{t+h}} = y_{{t+h-24}}$ | **Direct**: $y_{{t-23}} \\le t$ | **Direct**: $y_{{t-18}} \\le t$ | **Direct**: $y_t \\le t$ | **Recursive**: $y_t$ (repeating 24h cycle 7 times) <br>*Alternative*: $y_{{T-24}}$ (fixed 24h lag from origin $T-24$) |
+| **B. Daily Seasonal-Naive** | $\\hat{{y}}_{{t+h}} = y_{{t+h-24}}$ | **Direct**: $y_{{t-23}} \\le t$ | **Direct**: $y_{{t-18}} \\le t$ | **Direct**: $y_t \\le t$ | **Recursive**: $y_t$ (repeating 24h cycle 7 times) |
 | **C. Weekly Seasonal-Naive** | $\\hat{{y}}_{{t+h}} = y_{{t+h-168}}$ | **Direct**: $y_{{t-167}} \\le t$ | **Direct**: $y_{{t-162}} \\le t$ | **Direct**: $y_{{t-144}} \\le t$ | **Direct**: $y_t \\le t$ |
 
 ---
@@ -225,14 +234,18 @@ Evaluation across all $N = {evaluated_hours:,}$ valid target hours in the 3-year
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
 """
 
-
     for r in overall_results:
         md += (
             f"| **{r.horizon_hours}h** | {r.model_name} | {r.forecast_mode} | {r.n_observations:,} | "
             f"**{r.mae_mw:.2f}** | {r.rmse_mw:.2f} | **{r.mape_percent:.2f}%** | {r.mean_bias_mw:+.2f} |\n"
         )
 
-    md += """
+    md += f"""
+> [!NOTE]
+> **Diagnostic Reference for Horizon h=168:**
+> **Reference only — not a valid 168-hour-ahead forecast. Uses y[T−24], which is available only 24 hours before the target and therefore represents a much shorter information horizon. Shown solely to illustrate the effect of forecast lead time.**
+> * Fixed lag $y_{{T-24}}$ at target $T$: MAE = **{diag_metrics_168.mae_mw:.2f} MW**, RMSE = {diag_metrics_168.rmse_mw:.2f} MW, MAPE = **{diag_metrics_168.mape_percent:.2f}%** ($N = {diag_metrics_168.n_observations:,}$). This reference is excluded from the valid 168-hour baseline floor.
+
 ---
 
 ## 4. Annual Performance Breakdown (2022, 2023, 2024)
@@ -264,40 +277,41 @@ Stability of baseline error across individual calendar years:
 
 The official ENTSO-E Day-ahead Total Load Forecast [6.1.B] is compared here as a **descriptive operational benchmark**.
 
-### Operational Context & Alignment Nuance:
-* **ENTSO-E [6.1.B]** is issued once daily at **10:00 CET on day $D-1$** for all 24 hours of day $D$.
-* Its operational lead time ranges from **14 hours ahead** (for hour 00:00–01:00 D) to **38 hours ahead** (for hour 23:00–24:00 D).
-* It does NOT observe intraday load changes on the afternoon or evening of day $D-1$.
-* Consequently, a rolling 1-hour persistence model ($\\hat{{y}}_{{T}} = y_{{T-1}}$) operates with a massive recency advantage (1 hour ahead vs 14–38 hours ahead).
-* Conversely, Daily Seasonal-Naive ($y_{{T-24}}$) operates with a 24-hour lead time, providing a closer heuristic counterpart.
-
-### Mutually Aligned Comparison ($N = {n_m:,}$ hours):
+### 5.1. Lead-Time-Comparable Benchmark (24-Hour Horizon)
+Where information availability and forecast horizons are more comparable:
 
 | Forecasting System | Operational Lead Time | MAE (MW) | RMSE (MW) | MAPE (%) | Pearson $r$ |
 | :--- | :---: | :---: | :---: | :---: | :---: |
 | **ENTSO-E Day-ahead Forecast [6.1.B]** | **14–38 hours** (D-1 10:00 CET) | **{ec['mae']:.2f}** | **{ec['rmse']:.2f}** | **{ec['mape']:.2f}%** | **{ec['r']:.4f}** |
-| **Rolling Persistence ($h=1$)** | 1 hour | {p1['mae']:.2f} | {p1['rmse']:.2f} | {p1['mape']:.2f}% | — |
 | **Daily Seasonal-Naive ($h=24$)** | 24 hours | {d24['mae']:.2f} | {d24['rmse']:.2f} | {d24['mape']:.2f}% | — |
-| **Weekly Seasonal-Naive ($h=168$)** | 168 hours (1 week) | {w168['mae']:.2f} | {w168['rmse']:.2f} | {w168['mape']:.2f}% | — |
 
-**Core Analytical Insight:**
-Against a comparable 24-hour heuristic ($y_{{T-24}}$, MAE $509.27$ MW), the official ENTSO-E Day-ahead forecast achieves **less than half the error** (MAE $238.00$ MW, $2.55$% MAPE). This demonstrates the profound value of weather forecasts and physical scheduling in operational grid planning.
+### 5.2. Other Heuristic Horizons (For Descriptive Context Only)
+
+| Forecasting System | Operational Lead Time | MAE (MW) | RMSE (MW) | MAPE (%) |
+| :--- | :---: | :---: | :---: | :---: |
+| **Rolling Persistence ($h=1$)** | 1 hour | {p1['mae']:.2f} | {p1['rmse']:.2f} | {p1['mape']:.2f}% |
+| **Weekly Seasonal-Naive ($h=168$)** | 168 hours (1 week) | {w168['mae']:.2f} | {w168['rmse']:.2f} | {w168['mape']:.2f}% |
+
+> [!IMPORTANT]
+> **Important:** The 1-hour persistence result and the ENTSO-E day-ahead forecast are evaluated at substantially different forecast lead times and are therefore not an apples-to-apples performance comparison. The ENTSO-E forecast has a documented D−1 information boundary, corresponding to approximately 14–38 hours of lead time for the delivery day. The h=1 persistence result is shown for descriptive context only.
 
 ---
 
 ## 6. Methodological Findings & Scope Confirmation
 
-1. **Horizon Behavior:**
-   - At $h=1$, Persistence is the strongest baseline (MAE $230.12$ MW, $2.46$% MAPE) due to extreme short-term inertia.
-   - At $h=6$, Persistence degrades severely to MAE $1,022.97$ MW ($11.07$% MAPE) as the diurnal cycle shifts, while Daily Seasonal-Naive remains stable at MAE $509.12$ MW ($5.36$%).
-   - At $h=24$, Persistence from origin $t$ is mathematically identical to Daily Seasonal-Naive ($y_t = y_{{T-24}}$), achieving MAE $509.12$ MW.
-   - At $h=168$, Weekly Seasonal-Naive achieves MAE $677.13$ MW ($6.84$%).
-2. **Scope Enforcement:**
+> **The baseline experiments establish empirical reference points for subsequent learned models. The 24-hour daily seasonal-naive result provides a lead-time-relevant heuristic reference, while the ENTSO-E day-ahead forecast provides an external operational benchmark where information availability and evaluation populations are aligned.**
+
+### Detailed Observations:
+1. **Short-Term Inertia:** At $h=1$, Persistence achieves MAE 230.12 MW (2.46% MAPE) due to extreme short-term grid inertia.
+2. **Diurnal Shift:** By $h=6$, Persistence degrades severely to MAE 1,022.97 MW (11.07% MAPE) as the diurnal load cycle changes, whereas Daily Seasonal-Naive remains stable at MAE 509.12 MW (5.36%).
+3. **Horizon Equivalences:** At $h=24$, 24-step persistence from origin $t$ is mathematically identical to daily seasonal-naive ($y_t = y_{{T-24}}$, MAE 509.12 MW). At $h=168$, 168-step persistence from origin $t$ is mathematically identical to weekly seasonal-naive ($y_t = y_{{T-168}}$, MAE 677.13 MW).
+4. **Scope Enforcement:**
    - **Zero learned models have been built.**
    - No GBDT, neural network, hyperparameter tuning, or extra datasets have been introduced.
-   - All results strictly represent the empirical forecasting floor of Project P4.
+   - All results strictly represent the empirical reference floor of Project P4.
 """
     return md
+
 
 
 

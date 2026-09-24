@@ -162,6 +162,15 @@ To determine whether imputation is necessary or desirable, we quantified the exa
 | **Case 2: Causal Feature FFill (Recommended)** | For feature construction only, forward-fill missing hour from $y_{t-1}$. Never impute target $y_t$. | Left raw (NaN) | 26,093 / 26,136 (99.84%) | **43 rows (0.16%)** | **Zero leakage** | Highest: $y_{t-1}$ is strictly historical (known at $t$). Model is never trained or evaluated on synthetic targets. |
 | **Case 3: Linear Interpolation (REJECTED)** | Interpolate $y_t = (y_{t-1} + y_{t+1}) / 2$ | Imputed | 26,136 / 26,136 (100.0%) | 0 rows (0.00%) | **FATAL LEAKAGE** | Unacceptable: Uses future observation $y_{t+1}$ to construct feature at $t+1$, causing direct lookahead contamination. |
 
+**Exhaustive Pairwise Offset Collision Verification:**
+To rigorously prove that the distinct union of affected rows is exactly 172, an exhaustive pairwise check was executed across all $\binom{43}{2} = 903$ pairs of missing actual-load timestamps for difference offsets in $\{1, 23, 24, 144, 167, 168\}$ hours:
+* **Missing timestamps evaluated:** 43
+* **Pairwise offset collisions found:** **0 collisions**
+* **Literal set-union calculation:** $\text{AffectedSet} = \bigcup_{t \in \text{Missing}} \{t, t+1, t+24, t+168\} \cap T_{\text{eval}}$
+* **Exact distinct affected rows:** **172 rows**
+
+Because no pair of missing timestamps differs by any of the relevant lag offsets and all 43 missing timestamps occur well within the post-warmup evaluation window $T_{\text{eval}}$, the 43 sets of 4 timestamps are mutually disjoint, guaranteeing that exactly 172 distinct post-warmup rows are affected.
+
 **Recommended Leakage-Safe Policy:**
 We adopt **Case 2** (or Case 1). Causal forward-filling is applied exclusively to the feature calculation pipeline ($x_t^{\text{lag}}$) using strictly antecedent values ($y_{t-1}$), while the target column $y_t$ is preserved in its authentic, un-imputed state. Consequently, the model is strictly trained and evaluated against real empirical ground truth.
 
@@ -285,5 +294,5 @@ The official TSO Day-ahead forecast demonstrates exceptional baseline performanc
 4. **Causal Feature Handling:** Causal forward-fill is permitted **only for lag-feature construction** ($x_t^{\text{lag}}$).
 5. **Evaluation Rule:** Rows with missing actual targets are strictly excluded from model training and evaluation.
 6. **Anti-Leakage Principle:** No future information may be used in feature construction; all historical lag definitions must be strictly antecedent to the forecast origin.
-7. **Empirical Sanity Check Confirmed:** Exactly 172 distinct post-warmup timestamps are affected under complete-case lag invalidation across the 43 isolated missing hours.
+7. **Empirical Sanity Check Confirmed:** Exactly 172 distinct post-warmup timestamps are affected under complete-case lag invalidation across the 43 isolated missing hours. Formally verified by an exhaustive pairwise difference check across all 903 pairs of missing timestamps for offsets {1, 23, 24, 144, 167, 168} hours, which yielded 0 pairwise collisions, proving the distinct affected-row union is exactly 172 post-warmup timestamps.
 
