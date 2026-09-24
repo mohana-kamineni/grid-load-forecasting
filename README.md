@@ -140,7 +140,9 @@ p4-grid-load-forecasting/
 │   ├── features/                 # Frozen 21-feature pipeline & Swedish calendar
 │   └── models/                   # Frozen GBDT engine & evaluation runners
 ├── tests/                        # 63 unit, regression, and fault-injection tests
+├── LICENSE                       # MIT License
 ├── requirements.txt              # Environment dependencies
+├── walkthrough.md                # Comprehensive end-to-end walkthrough
 └── README.md
 ```
 
@@ -150,7 +152,7 @@ p4-grid-load-forecasting/
 
 ### Prerequisites
 * Python 3.10+
-* ENTSO-E API Security Token (only required if re-downloading raw XML; raw files are already included in repository)
+* ENTSO-E API Security Token (only required if re-downloading raw telemetry via API; processed Parquet datasets are included in the repository for out-of-the-box reproducibility)
 
 ### Installation
 ```bash
@@ -177,3 +179,10 @@ All 63 automated tests verify feature causality, missing-target accounting, DST 
 * **Engineering & Code Quality:** **RESEARCH-GRADE / REPRODUCIBLE** — Fully modular pipeline with 63 automated unit and regression tests passing.
 * **Credential Hygiene:** **THOROUGH** — Zero credentials logged, committed, or manifested.
 * **Empirical Integrity:** **METHODOLOGICALLY SOUND** — Pre-commitment pre-recorded; single blind test run; frozen results reported without cherry-picking or post-hoc adjustments.
+
+---
+
+## 9. License & Data Terms
+
+* **Code & Documentation:** The original source code, documentation, and analysis scripts in this repository are licensed under the [MIT License](LICENSE).
+* **Third-Party / ENTSO-E Data:** Electricity load and forecast data included or retrieved by this project originate from the [ENTSO-E Transparency Platform](https://transparency.entsoe.eu/) under Regulation (EU) No 543/2013 and remain subject to ENTSO-E's terms of use and data policies. The MIT license applies strictly to the project's original software and documentation, not to third-party data.

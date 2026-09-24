@@ -1,0 +1,12 @@
+{
+  "series_label": "day_ahead_forecast_6_1_b",
+  "year": 2023,
+  "document_type": "A65",
+  "process_type": "A01",
+  "bidding_zone": "10Y1001A1001A46L",
+  "period_start_utc": "202301010000",
+  "period_end_utc": "202401010000",
+  "retrieved_at_utc": "20260924T122917Z",
+  "raw_filename": "day_ahead_forecast_6_1_b_SE3_2023_20260924T122917Z.xml",
+  "file_size_bytes": 1061374
+}

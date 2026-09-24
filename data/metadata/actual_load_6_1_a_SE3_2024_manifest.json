@@ -1,0 +1,12 @@
+{
+  "series_label": "actual_load_6_1_a",
+  "year": 2024,
+  "document_type": "A65",
+  "process_type": "A16",
+  "bidding_zone": "10Y1001A1001A46L",
+  "period_start_utc": "202401010000",
+  "period_end_utc": "202501010000",
+  "retrieved_at_utc": "20260924T122848Z",
+  "raw_filename": "actual_load_6_1_a_SE3_2024_20260924T122848Z.xml",
+  "file_size_bytes": 1064395
+}

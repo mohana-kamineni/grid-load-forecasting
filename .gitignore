@@ -43,8 +43,10 @@ data/raw/*
 !data/raw/.gitkeep
 data/processed/*
 !data/processed/.gitkeep
+!data/processed/*.parquet
 data/metadata/*
 !data/metadata/.gitkeep
+!data/metadata/*.json
 
 # IDE & OS
 .vscode/
