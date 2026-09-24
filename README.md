@@ -1,4 +1,4 @@
-# Project P4: Data-Driven Grid Load Forecasting for Operational Planning
+# Data-Driven Grid Load Forecasting for Operational Planning
 
 [![Status: Complete](https://img.shields.io/badge/Status-Complete%20—%20Evaluated%20%26%20Frozen-brightgreen.svg)](#)
 [![Data Source: ENTSO-E](https://img.shields.io/badge/Data%20Source-ENTSO--E%20Transparency%20Platform-blue.svg)](https://transparency.entsoe.eu/)
@@ -7,7 +7,6 @@
 
 ## 1. Project Identity & Research Question
 
-* **Project ID:** P4
 * **Working Title:** Data-Driven Grid Load Forecasting for Operational Planning
 * **Direction:** Operational excellence / data-driven decision support (aligned with industrial applied research frameworks).
 * **Research Focus:** Real-world, operationally grounded electricity demand forecasting under verified physical and regulatory constraints.
@@ -19,9 +18,9 @@ The primary research objective is to establish the empirical usefulness and limi
 
 ---
 
-## 2. Methodological Foundation: Gate 0 Temporal Audit
+## 2. Methodological Foundation: Temporal Audit
 
-Prior to baseline or model development, the dataset underwent an exhaustive forensic audit (**Gate 0: Provenance and Temporal Validity Audit**):
+Prior to baseline or model development, the dataset underwent an exhaustive forensic audit (**Provenance and Temporal Validity Audit**):
 
 1. **Gate 0.1 — Provenance & Regulatory Status:** Verified official ENTSO-E Transparency Platform data under EU Regulation 543/2013 (Articles 6.1.a & 6.1.b) for Sweden bidding zone SE3 (`10Y1001A1001A46L`).
 2. **Gate 0.2 — Timezone & DST Integrity (HARD GATE):** Evaluated in canonical UTC with Europe/Stockholm reference. All 8 Daylight Saving Time transitions across 2022–2025 verified intact (24 physical UTC hours per day; 23 wall-clock hours in spring, 25 in autumn).
