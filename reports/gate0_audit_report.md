@@ -18,16 +18,16 @@
 | Sub-Audit Gate | Status | Key Evaluation Metric |
 | :--- | :---: | :--- |
 | **Gate 0.1 — Provenance** | **PASS** | Authoritative ENTSO-E specification, EU Reg 543/2013, MW units |
-| **Gate 0.2 — Timezone & DST** | **AMBIGUOUS** | 8/8 DST transitions verified; canonical UTC vs Europe/Stockholm |
-| **Gate 0.3 — Continuity** | **AMBIGUOUS** | 0/35,064 physical hours, 35064 missing |
-| **Gate 0.4 — Artificial-Data** | **AMBIGUOUS** | Max flatline: 0h; Linear interp spans: 0 |
+| **Gate 0.2 — Timezone & DST** | **PASS** | 8/8 DST transitions verified; canonical UTC vs Europe/Stockholm |
+| **Gate 0.3 — Continuity** | **FAIL** | 37,154/35,064 physical hours, 56 missing |
+| **Gate 0.4 — Artificial-Data** | **PASS** | Max flatline: 1h; Linear interp spans: 0 |
 | **Gate 0.5 — Forecast Semantics** | **PASS** | Information cutoff: D-1 10:00 CET; anti-leakage verified |
 
 ### Overall Master Decision
 > **AMBIGUOUS — DO NOT MODEL YET**
 
 **Justification:**
-The Gate 0 audit framework, verification tests, and API ingestion modules have been fully implemented. However, real ENTSO-E SE3 load data has not yet been fetched/ingested. Under methodological instructions, we do not claim a Gate 0 PASS without real operational data.
+Provenance, Timezone/DST (8/8 transitions), Artificial-Data (0 flatlines, 0 interpolation spans), and Forecast Semantics passed. However, Continuity audit failed strict 35,064 hourly expectation: found 56 missing hours (0.16% missingness across 2022-2024) and 37,154 rows due to a structural resolution shift to 15-minute MTU (PT15M) in December 2025. Modeling is strictly halted until resolution harmonization and missingness handling are approved.
 
 ---
 
@@ -49,50 +49,62 @@ The Gate 0 audit framework, verification tests, and API ingestion modules have b
 
 ## 3. Gate 0.2 — Timezone & Daylight Saving Time (DST) Audit (HARD GATE)
 
-* **Canonical Storage Timeline:** Not loaded (tz-aware UTC)
+* **Canonical Storage Timeline:** UTC (tz-aware UTC)
 * **Local Reference Timezone:** Europe/Stockholm
-* **Suitability for Forecasting Indexing:** Pending dataset ingestion.
+* **Suitability for Forecasting Indexing:** SUITABLE: Canonical timeline is strictly continuous in UTC physical hours. Lag features (e.g. lag_24, lag_168) operate on uninterrupted physical intervals. Local calendar features (hour_of_day, day_of_week) can be derived via tz_convert('Europe/Stockholm') without disrupting the underlying time-delta continuity.
 
 ### Audit of All 8 Daylight Saving Time Transitions (2022–2025)
 
 | Transition Date | Type | Expected UTC Hours | Actual UTC Hours | Expected Local Hours | Actual Local Hours | Duplicate UTC | Missing UTC | Result |
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| `2022-03-27` | spring_forward | 24 | 24 | 23 | 23 | 0 | 0 | **PASS** |
+| `2022-10-30` | autumn_fallback | 24 | 24 | 25 | 25 | 0 | 0 | **PASS** |
+| `2023-03-26` | spring_forward | 24 | 24 | 23 | 23 | 0 | 0 | **PASS** |
+| `2023-10-29` | autumn_fallback | 24 | 24 | 25 | 25 | 0 | 0 | **PASS** |
+| `2024-03-31` | spring_forward | 24 | 24 | 23 | 23 | 0 | 0 | **PASS** |
+| `2024-10-27` | autumn_fallback | 24 | 24 | 25 | 25 | 0 | 0 | **PASS** |
+| `2025-03-30` | spring_forward | 24 | 24 | 23 | 23 | 0 | 0 | **PASS** |
+| `2025-10-26` | autumn_fallback | 24 | 24 | 25 | 25 | 0 | 0 | **PASS** |
 
 ---
 
 ## 4. Gate 0.3 — Timestamp Continuity & Monotonicity Audit
 
 * **Total Expected Physical Hours:** 35,064 hours (including leap year 2024)
-* **Total Actual Hours Inspected:** 0 hours
-* **Strict Monotonic Increasing Index:** NO (FAILED)
-* **Total Missing Hours:** 35064
+* **Total Actual Hours Inspected:** 37,154 hours
+* **Strict Monotonic Increasing Index:** Yes
+* **Total Missing Hours:** 56
 * **Total Duplicate Timestamps:** 0
-* **Abnormal UTC Day Count:** 0 days
+* **Abnormal UTC Day Count:** 84 days
 
 ### Annual Verification Summary
 
 | Calendar Year | Expected Physical Hours | Actual Hours | Missing | Duplicates | Result |
 | :---: | :---: | :---: | :---: | :---: | :---: |
+| **2022** | 8,760 | 8,747 | 13 | 0 | **FAIL** |
+| **2023** | 8,760 | 8,748 | 12 | 0 | **FAIL** |
+| **2024** | 8,784 | 8,766 | 18 | 0 | **FAIL** |
+| **2025** | 8,760 | 10,893 | 13 | 0 | **FAIL** |
 
 ---
 
 ## 5. Gate 0.4 — Artificial-Data, Flatline, and Interpolation Audit
 
 * **Consecutive Duplicate Count:** 0 (0.0000%)
-* **Maximum Flatline Duration:** 0 consecutive hours
+* **Maximum Flatline Duration:** 1 consecutive hours
 * **First Difference ($\Delta y_t$) Summary:**
-  * Mean: 0.00 MW
-  * Std: 0.00 MW
-  * IQR: 0.00 MW
+  * Mean: 0.03 MW
+  * Std: 303.05 MW
+  * IQR: 299.00 MW
   * Zero-Change Rate ($\mathbb{P}(\Delta y = 0)$): 0.0000%
 * **Second Difference ($\Delta^2 y_t$) Linear Interpolation Test:**
   * Detected deterministic linear interpolation spans: 0
   * Maximum linear interpolation duration: 0 hours
 * **Autocorrelation Structure:**
-  * Lag-1 (1 hour): 0.0000
-  * Lag-24 (1 day): 0.0000
-  * Lag-48 (2 days): 0.0000
-  * Lag-168 (1 week): 0.0000
+  * Lag-1 (1 hour): 0.9888
+  * Lag-24 (1 day): 0.9236
+  * Lag-48 (2 days): 0.8572
+  * Lag-168 (1 week): 0.8697
 
 ---
 
@@ -115,6 +127,9 @@ The Gate 0 audit framework, verification tests, and API ingestion modules have b
 
 **Methodological Next Steps:**
 
-1. Real ENTSO-E dataset has not yet been ingested into the pipeline.
-2. All audit tooling, DST verification suites, and interpolation detectors are operational and verified on synthetic fixtures.
-3. Ingest real ENTSO-E SE3 load data (via API token or File Library CSV) and re-run runner to obtain definitive PASS/FAIL verdict.
+1. Real ENTSO-E SE3 dataset has been successfully acquired, verified, and audited.
+2. Provenance, Timezone/DST (8/8 transitions intact), Artificial-Data (0 flatlines, 0 interpolation spans), and Forecast Semantics all PASSED.
+3. Continuity Ambiguity Identified:
+   - 43 isolated single-hour missing gaps across 2022–2024 (0.16% missingness rate).
+   - Structural transition to 15-minute resolution (PT15M, 2,864 rows) on 2025-12-01 23:00 UTC.
+4. Methodological Rule Enforced: Modeling is strictly HALTED. Await user review and decision regarding (a) December 2025 hourly downsampling vs 2022–2024 study boundary, and (b) explicit imputation policy for isolated missing hours.

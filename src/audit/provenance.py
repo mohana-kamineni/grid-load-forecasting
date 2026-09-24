@@ -106,10 +106,10 @@ def audit_provenance(
     if df is not None and not df.empty:
         if "unit" in df.columns:
             observed_unit = df["unit"].iloc[0]
-            if observed_unit != "MW":
-                errors.append(f"Unit in dataframe is '{observed_unit}', expected 'MW'.")
+            if observed_unit not in ("MW", "MAW"):
+                errors.append(f"Unit in dataframe is '{observed_unit}', expected 'MW' or 'MAW' (Megawatts).")
             else:
-                findings.append(f"Verified dataset unit column: '{observed_unit}'")
+                findings.append(f"Verified dataset unit column: '{observed_unit}' (Megawatts)")
         if "area_code" in df.columns:
             observed_area = df["area_code"].iloc[0]
             if observed_area != CONFIG.AREA_CODE_SE3:
